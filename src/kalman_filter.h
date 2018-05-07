@@ -17,11 +17,21 @@ public:
   // process covariance matrix
   Eigen::MatrixXd Q_;
 
-  // measurement matrix
+  // measurement matrix, laser
   Eigen::MatrixXd H_;
 
-  // measurement covariance matrix
-  Eigen::MatrixXd R_;
+  // measurement matrix, radar
+  // Eigen::MatrixXd Hj;
+
+  // measurement covariance matrix, laser
+  Eigen::MatrixXd R_laser_;
+
+  // measurement covariance matrix, radar
+  Eigen::MatrixXd R_radar_;
+
+  // noise
+  float noise_ax;
+  float noise_ay;
 
   /**
    * Constructor
@@ -50,7 +60,7 @@ public:
    * using the process model
    * @param delta_T Time between k and k+1 in s
    */
-  void Predict();
+  void Predict(const float &dt);
 
   /**
    * Updates the state by using standard Kalman Filter equations
