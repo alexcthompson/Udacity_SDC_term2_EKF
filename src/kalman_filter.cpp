@@ -8,10 +8,11 @@ using Eigen::VectorXd;
 // VectorXd or MatrixXd objects with zeros upon creation.
 
 KalmanFilter::KalmanFilter() {
-    //measurement matrix
   H_ = MatrixXd(2, 4);
   H_ << 1, 0, 0, 0,
         0, 1, 0, 0;
+
+  Hj = MatrixXd(3, 4);
 
   //measurement covariance matrix - laser
   R_laser_ = MatrixXd(2, 2);
@@ -36,7 +37,6 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
   P_ = P_in;
   F_ = F_in;
   H_ = H_in;
-  // R_ = R_in;
   Q_ = Q_in;
 }
 
@@ -45,12 +45,11 @@ void KalmanFilter::Predict(const float &dt) {
   TODO:
     * predict the state
   */
-  // std::cout << "P before Predict: \n" << std::endl << P_ << std::endl;
   F_= MatrixXd(4, 4);
   F_ << 1, 0, dt,  0,
         0, 1,  0, dt,
         0, 0,  1,  0,
-        0, 0,  1,  0;
+        0, 0,  0,  1;
 
   float dt2 = pow(dt, 2.0);
   float dt3 = pow(dt, 3.0);
@@ -66,27 +65,55 @@ void KalmanFilter::Predict(const float &dt) {
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Kalman Filter equations
-  */
+  // difference and Kalman gain
   VectorXd y = z - H_ * x_;
-  std::cout << "y = " << std::endl << y << std::endl;
   MatrixXd S = H_ * P_ * H_.transpose() + R_laser_;
   MatrixXd K = P_ * H_.transpose() * S.inverse();
-  std::cout << "K = " << std::endl << K << std::endl;
-
 
   // new estimate
   x_ = x_ + (K * y);
+
+  // update P_
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size, x_size);
   P_ = (I - K * H_) * P_;
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
-  */
+  // if radar distance ro is less than 10cm, skip it (angle to erratic)
+  if (abs(z(0)) < 0.1){ return;}
+
+  // map x into observation space
+  VectorXd hx;
+  hx = VectorXd(3);
+  hx(0) = sqrt(x_(0) * x_(0) + x_(1) * x_(1));
+  hx(1) = atan2(x_(1), x_(0));
+  hx(2) = (x_(0) * x_(2) + x_(1) * x_(3)) / hx(0);
+
+  // difference
+  VectorXd y = z - hx;
+
+  // correct angle to [-pi, pi]
+  if (y(1) > M_PI) {
+    y(1) = y(1) - 2 * M_PI;
+  }
+  else if(y(1) < - M_PI) {
+    y(1) = y(1) + 2 * M_PI;
+  }
+
+  // get the jacobian
+  Tools tools;
+  Hj = tools.CalculateJacobian(x_);
+
+  // Kalman gain  
+  MatrixXd S = Hj * P_ * Hj.transpose() + R_radar_;
+  MatrixXd K = P_ * Hj.transpose() * S.inverse();
+
+  // new estimate
+  x_ = x_ + (K * y);
+
+  // update P_
+  long x_size = x_.size();
+  MatrixXd I = MatrixXd::Identity(x_size, x_size);
+  P_ = (I - K * Hj) * P_;
 }

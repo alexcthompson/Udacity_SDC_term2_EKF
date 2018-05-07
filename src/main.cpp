@@ -30,7 +30,6 @@ int main()
 {
   uWS::Hub h;
 
-  cout << "starting" << endl;
   // Create a Kalman Filter instance
   FusionEKF fusionEKF;
 
@@ -87,9 +86,17 @@ int main()
             iss >> ro;
             iss >> theta;
             iss >> ro_dot;
+
+            // make sure theta is in [-pi, pi]
+            if(theta > M_PI){
+              theta = theta - 2 * M_PI;
+            } else if(theta < - M_PI){
+              theta = theta + 2 * M_PI;
+            }
+            
             meas_package.raw_measurements_ << ro, theta, ro_dot;
+            cout << "Radar measurements = " << ro << ", " << theta << ", " << ro_dot << endl;
             iss >> timestamp;
-            cout << "Timestamp: " << timestamp << endl;
             meas_package.timestamp_ = timestamp;
           }
           float x_gt;
@@ -136,7 +143,6 @@ int main()
           msgJson["rmse_vx"] = RMSE(2);
           msgJson["rmse_vy"] = RMSE(3);
           auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
-          // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
     
         }
