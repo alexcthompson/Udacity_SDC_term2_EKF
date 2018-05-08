@@ -95,7 +95,6 @@ int main()
             }
             
             meas_package.raw_measurements_ << ro, theta, ro_dot;
-            cout << "Radar measurements = " << ro << ", " << theta << ", " << ro_dot << endl;
             iss >> timestamp;
             meas_package.timestamp_ = timestamp;
           }
@@ -138,6 +137,7 @@ int main()
           json msgJson;
           msgJson["estimate_x"] = p_x;
           msgJson["estimate_y"] = p_y;
+          // cout << "RMSE val = < " << RMSE(0) << ", " << RMSE(1) << ", " << RMSE(2) << ", " << RMSE(3) << ">\n";
           msgJson["rmse_x"] =  RMSE(0);
           msgJson["rmse_y"] =  RMSE(1);
           msgJson["rmse_vx"] = RMSE(2);
